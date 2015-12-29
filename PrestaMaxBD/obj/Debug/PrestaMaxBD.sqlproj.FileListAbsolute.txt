@@ -1,0 +1,5 @@
+C:\Users\oscar\Desktop\Dropbox\Escuela\C#\PrestaMaxv2\PrestaMaxBD\bin\Debug\PrestaMaxBD.dacpac
+C:\Users\oscar\Desktop\Dropbox\Escuela\C#\PrestaMaxv2\PrestaMaxBD\bin\Debug\PrestaMaxBD.dll
+C:\Users\oscar\Desktop\Dropbox\Escuela\C#\PrestaMaxv2\PrestaMaxBD\bin\Debug\PrestaMaxBD.pdb
+C:\Users\oscar\Desktop\Dropbox\Escuela\C#\PrestaMaxv2\PrestaMaxBD\obj\Debug\PrestaMaxBD.dll
+C:\Users\oscar\Desktop\Dropbox\Escuela\C#\PrestaMaxv2\PrestaMaxBD\obj\Debug\PrestaMaxBD.pdb

@@ -1,0 +1,76 @@
+26/12/2014 10:15:16	Este registro contiene información acerca de la operación de importación de esquema en el proyecto 'PrestaMaxBD' del equipo 'OSCAR' por el usuario 'oscar'.
+26/12/2014 10:15:16	Se inició la importación del esquema de la base de datos.
+26/12/2014 10:15:31	Recopilando opciones de base de datos
+26/12/2014 10:15:31	Recopilando usuarios
+26/12/2014 10:15:31	Recopilando roles
+26/12/2014 10:15:31	Recopilando roles de aplicación
+26/12/2014 10:15:31	Recopilando pertenencias a roles
+26/12/2014 10:15:31	Recopilando grupos de archivos
+26/12/2014 10:15:31	Recopilando catálogos de texto completo
+26/12/2014 10:15:31	Recopilando ensamblados
+26/12/2014 10:15:31	Recopilando certificados
+26/12/2014 10:15:31	Recopilando claves asimétricas
+26/12/2014 10:15:31	Recopilando claves simétricas
+26/12/2014 10:15:32	Recopilando claves simétricas cifradas
+26/12/2014 10:15:32	Recopilando esquemas
+26/12/2014 10:15:34	Recopilando colecciones de esquemas XML
+26/12/2014 10:15:34	Recopilando tipos de datos definidos por el usuario
+26/12/2014 10:15:34	Recopilando tipos definidos por el usuario
+26/12/2014 10:15:34	Recopilando tipos de tabla
+26/12/2014 10:15:34	Recopilando claves únicas para tipos de tabla
+26/12/2014 10:15:34	Recopilando claves principales para tipos de tabla
+26/12/2014 10:15:34	Recopilando restricciones CHECK para tipos de tabla
+26/12/2014 10:15:34	Recopilando restricciones DEFAULT para tipos de tabla
+26/12/2014 10:15:34	Recopilando funciones de partición
+26/12/2014 10:15:34	Recopilando esquemas de partición
+26/12/2014 10:15:34	Recopilando funciones
+26/12/2014 10:15:34	Recopilando funciones cifradas
+26/12/2014 10:15:34	Recopilando agregados
+26/12/2014 10:15:34	Recopilando procedimientos
+26/12/2014 10:15:35	Recopilando procedimientos cifrados
+26/12/2014 10:15:35	Recopilando tablas
+26/12/2014 10:15:35	Recopilando claves principales
+26/12/2014 10:15:35	Recopilando restricciones UNIQUE
+26/12/2014 10:15:35	Recopilando claves externas
+26/12/2014 10:15:35	Recopilando restricciones DEFAULT
+26/12/2014 10:15:35	Recopilando restricciones CHECK
+26/12/2014 10:15:35	Recopilando vistas
+26/12/2014 10:15:35	Recopilando vistas cifradas
+26/12/2014 10:15:35	Recopilando índices
+26/12/2014 10:15:35	Recopilando estadísticas
+26/12/2014 10:15:35	Recopilando listas de palabras irrelevantes de índices de texto completo
+26/12/2014 10:15:35	Recopilando listas de propiedades de búsqueda
+26/12/2014 10:15:35	Recopilando propiedades de búsqueda
+26/12/2014 10:15:35	Recopilando índices de texto completo
+26/12/2014 10:15:35	Recopilando índices de almacenamiento de columnas
+26/12/2014 10:15:35	Recopilando índices espaciales
+26/12/2014 10:15:35	Recopilando índices XML
+26/12/2014 10:15:35	Recopilando índices XML selectivos
+26/12/2014 10:15:35	Recopilando desencadenadores cifrados
+26/12/2014 10:15:35	Recopilando desencadenadores
+26/12/2014 10:15:35	Recopilando DDL triggers cifrados y de CLR
+26/12/2014 10:15:35	Recopilando DDL triggers
+26/12/2014 10:15:35	Recopilando sinónimos
+26/12/2014 10:15:35	Recopilando valores predeterminados
+26/12/2014 10:15:35	Recopilando enlaces UDDT de restricción de datos
+26/12/2014 10:15:35	Recopilando reglas
+26/12/2014 10:15:35	Recopilando enlaces UDDT de restricción de datos
+26/12/2014 10:15:35	Recopilando tipos de mensaje
+26/12/2014 10:15:35	Recopilando colas
+26/12/2014 10:15:35	Recopilando contratos
+26/12/2014 10:15:35	Recopilando servicios
+26/12/2014 10:15:35	Recopilando notificaciones de eventos
+26/12/2014 10:15:35	Recopilando enlaces de servicio remoto
+26/12/2014 10:15:35	Recopilando prioridades de Broker
+26/12/2014 10:15:35	Recopilando firmas
+26/12/2014 10:15:35	Recopilando opciones de compresión de datos
+26/12/2014 10:15:35	Recopilando tipos de secuencia
+26/12/2014 10:15:35	Recopilando propiedades extendidas
+26/12/2014 10:15:36	Recopilando credenciales
+26/12/2014 10:15:36	Recopilando inicios de sesión
+26/12/2014 10:15:36	Recopilando auditorías de servidor
+26/12/2014 10:15:41	Buscando elementos duplicados en el proyecto
+26/12/2014 10:15:41	Ha finalizado el procesamiento de los elementos duplicados
+26/12/2014 10:15:42	Finalizó la importación de la base de datos.
+26/12/2014 10:15:42	Se guardó un resumen de la importación en la siguiente ubicación: C:\Users\oscar\Desktop\Dropbox\Escuela\C#\PrestaMaxv2\PrestaMaxBD\Registros de importación de esquemas\PrestaMaxBD_20141226041516.log
+26/12/2014 10:15:42	Haga clic en Finalizar para continuar...
