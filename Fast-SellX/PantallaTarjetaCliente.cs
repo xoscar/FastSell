@@ -99,9 +99,13 @@ namespace Fast_SellX
                 string _res = "";
                 _co.Abrir();
                 _co.ModificarCliente(_cli, ref _res);
+                _co.Cerrar();
                 MessageBox.Show(_res, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                _co.Abrir();
                 _co.AtraparCliente(_cli.Id_Cliente, ref _cli, ref _res);
                 _co.Cerrar();
+
                 MostrarCliente();
                 chModificar.Checked = false;
                 
@@ -172,11 +176,16 @@ namespace Fast_SellX
                         string _res = "";
                         _co.Abrir();
                         bool a = _co.AgregarPrecio(_cli, _nombre, id, _pres, ref _res);
+                        _co.Cerrar();
+
                         if (a)
                         {
                             MessageBox.Show(_res, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                            _co.Abrir();
                             _co.AtraparCliente(_cli.Id_Cliente, ref _cli, ref _res);
                             _co.Cerrar();
+
                             MostrarCliente();
                             txtPrecio.Clear();
                         }

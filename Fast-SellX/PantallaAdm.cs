@@ -189,9 +189,16 @@ namespace Fast_SellX
                 string _res = "";
                 _co.Abrir();
                 _co.AtraparCliente(dgv[0, e.RowIndex].Value.ToString(), ref _cli, ref _res);
+                _co.Cerrar();
+
+                _co.Abrir();
                 _co.MostrarPedidos(dgvPredido, _cli.Id_Cliente, ref _res);
+                _co.Cerrar();
+
+                _co.Abrir();
                 _co.MostrarNotas(dgvNota, _cli.Id_Cliente, ref _res);
                 _co.Cerrar();
+
                 lblCliente.Text = "Cliente: " + _cli.Nombre + " " + _cli.Apellido;
             }
         }
@@ -220,6 +227,7 @@ namespace Fast_SellX
                         _co.Abrir();
                         _co.AtraparPedido(Convert.ToInt32(dgv[0, e.RowIndex].Value), ref _ped, ref _res);
                         _co.Cerrar();
+
                         _dePed.Inicializar(this, _co, _ped, _cli);
                         _dePed.Show();
                         break;
@@ -233,6 +241,7 @@ namespace Fast_SellX
                             _co.Abrir();
                             _co.AtraparPedido(Convert.ToInt32(dgv[0, e.RowIndex].Value), ref _ped, ref _res);
                             _co.Cerrar();
+
                             _eli = new Eliminar();
                             string _clave = "LIQUIDAR";
                             string _text = "Escriba \"LIQUIDAR\" para confirmar";
@@ -275,9 +284,11 @@ namespace Fast_SellX
                         Nota _aux = new Nota();
                         _aux.Id_Nota = Convert.ToInt32(dgv[0,e.RowIndex].Value);
                         string _res = "";
+
                         _co.Abrir();
                         _co.AtraparNota(_aux.Id_Nota, ref _aux, ref _res);
                         _co.Cerrar();
+
                         _deNota = new DetallesNota();
                         _deNota.Inicializar(this, _co, _cli, _aux);
                         _deNota.Show();
@@ -314,18 +325,22 @@ namespace Fast_SellX
             int nota_id = Convert.ToInt32(dgvNota[0,row].Value);
             Nota _no = new Nota();
             string _res = "";
+
             _co.Abrir();
             _co.AtraparNota(nota_id, ref _no, ref _res);
             _co.Cerrar();
+
             Abono _aux = new Abono();
             _aux.Cantidad = cantidad;
             _aux.Id_Nota = nota_id;
             _aux.Id_Pedido = _no.Id_Pedido;
             _aux.Id_User = _user.Login;
             _aux.Id_Cliente = _cli.Id_Cliente;
+
             _co.Abrir();
             bool _agregado = _co.AgregarAbono(_aux, ref _res);
             _co.Cerrar();
+
             if (_agregado)
                 MessageBox.Show("Abono Agregado Nota Cliente: " + _cli.Nombre + " " + _cli.Apellido + " Nota ID " + _no.Id_Nota);
             else
@@ -338,9 +353,17 @@ namespace Fast_SellX
             string _res = "";
             _co.Abrir();
             _co.AtraparCliente(_cli.Id_Cliente , ref _cli, ref _res);
+            _co.Cerrar();
+
+            _co.Abrir();
             _co.MostrarPedidos(dgvPredido, _cli.Id_Cliente, ref _res);
+            _co.Cerrar();
+
+            _co.Abrir();
             _co.MostrarNotas(dgvNota, _cli.Id_Cliente, ref _res);
             _co.Cerrar();
+
+
             MostrarClientes();
         }
 
@@ -370,9 +393,12 @@ namespace Fast_SellX
                         return;
                     }
                     string _res = "";
+
                     _co.Abrir();
                     _co.AgregarCliente(_aux, ref _res);
                     _co.Cerrar();
+
+
                     txtNombreCli.Clear();
                     txtDireccionCli.Clear();
                     txtApellidoCli.Clear();
@@ -673,13 +699,20 @@ namespace Fast_SellX
                             _aux.Precio_General = double.Parse(txtPrecioProducto.Text);
                             _aux.Descripcion = txtDescripcionProducto.Text;
                             string _res = "";
+
                             _co.Abrir();
                             _co.ModificarProducto(_aux, ref _res);
-                            MessageBox.Show(_res, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            _co.MostrarProductos(dgvProducto, ref _res);
-                            _co.AtraparProducto(_aux.Id_Producto, ref _aux, ref _res);
-                            chModificar.Checked = false;
                             _co.Cerrar();
+
+                            MessageBox.Show(_res, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            _co.Abrir();
+                            _co.MostrarProductos(dgvProducto, ref _res);
+                            _co.Cerrar();
+
+                            _co.Abrir();
+                            _co.AtraparProducto(_aux.Id_Producto, ref _aux, ref _res);
+                            _co.Cerrar();
+                            chModificar.Checked = false;
 
                         }
                         catch (Exception ex)
@@ -752,9 +785,13 @@ namespace Fast_SellX
             _aux1.Cantidad = cantidad;
             _aux1.Id_Producto = Convert.ToInt32(dgvProducto[0, row].Value);
             string _res = "";
+
             _co.Abrir();
             _co.AgregarCantidadProducto(_aux1, ref _res);
+            _co.Cerrar();
+
             MessageBox.Show(_res, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            _co.Abrir();
             _co.MostrarProductos(dgvProducto, ref _res);
             _co.Cerrar();
         }
@@ -848,9 +885,13 @@ namespace Fast_SellX
                     string _res = "";
                     _co.Abrir();
                     _co.ModificarRepartidor(_repartidor, ref _res);
+                    _co.Cerrar();
+
+                    _co.Abrir();
                     MessageBox.Show(_res, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     _co.MostrarRepartidores(dgvRepartidor,ref  _res);
                     _co.Cerrar();
+
                     chMoficiarRepartidor.Checked = false;
                 }
                 else
@@ -900,6 +941,9 @@ namespace Fast_SellX
 
                  _co.Abrir();
                  _co.AtraparPedido(_ped.Id_Pedido, ref _ped, ref _res);
+                 _co.Cerrar();
+
+                 _co.Abrir();
                  _co.AtraparCliente(_ped.Id_Cliente, ref _cli, ref _res);
                  _co.Cerrar();
 
@@ -964,8 +1008,12 @@ namespace Fast_SellX
                          _ped.Id_Pedido = Convert.ToInt32(dgv[0,e.RowIndex].Value);
                          _co.Abrir();
                          _co.AtraparPedido(_ped.Id_Pedido, ref _ped, ref _res );
+                         _co.Cerrar();
+
+                         _co.Abrir();
                          _co.AtraparCliente(_ped.Id_Cliente, ref _cli, ref _res);
                          _co.Cerrar();
+
                          this.Enabled = false;
                          _dePed = new DetallesPedido();
                          _dePed.Inicializar(this, _co, _ped, _cli);
@@ -1069,10 +1117,15 @@ namespace Fast_SellX
                         MessageBox.Show(ex.Message + "Error en los datos", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
+
                     _co.Abrir();
                     _co.AgregarProveedor(_prov);
+                    _co.Cerrar();
+
+                    _co.Abrir();
                     _co.MostrarProveedores(dgvProveedor);
                     _co.Cerrar();
+
                     MessageBox.Show("Proveedor agregado con exito", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else

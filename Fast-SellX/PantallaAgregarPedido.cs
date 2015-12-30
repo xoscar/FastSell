@@ -369,20 +369,29 @@ namespace Fast_SellX
                                 string _res = "";
                                 int _pedId = 0;
                                 _co.Abrir();
+
                                 _agregado = _co.AgregarPedido(_ped, ref _res, ref _pedId);
+                                _co.Cerrar();
+
+                                Conexion _conAux = new Conexion();
                                 for (int i = 0; i < _cli.Precios.Count; i++)
                                 {
                                     Producto _aux = ((Producto)_cli.Precios[i]);
-                                    _agregado = _co.ModificarProductoCantidad(_aux, ref _res);
+
+                                    _conAux.Abrir();
+                                    _agregado = _conAux.ModificarProductoCantidad(_aux, ref _res);
+                                    _conAux.Cerrar();
+
                                 }
-                                _co.Cerrar();
                                 if (_agregado)
                                 {
                                     Pedido _aux = new Pedido();
                                     _res = "";
+
                                     _co.Abrir();
                                     _co.AtraparPedido(_pedId, ref _aux, ref _res);
                                     _co.Cerrar();
+
                                     Documentos.GenerarPedido(_aux, _cli);
                                     MessageBox.Show("Pedido Agregado a Cliente: " + _cli.Nombre + " " + _cli.Apellido, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                                     _prod = new ArrayList();
@@ -440,22 +449,36 @@ namespace Fast_SellX
                                 int _pedId = 0;
                                 _co.Abrir();
                                 _agregado = _co.AgregarPedido(_ped, ref _res, ref _pedId);
+                                _co.Cerrar();
                                 _no.Id_Pedido = _pedId;
+                                Conexion _conAux = new Conexion();
                                 for (int i = 0; i < _cli.Precios.Count; i++)
                                 {
                                     Producto _aux = ((Producto)_cli.Precios[i]);
-                                    _agregado = _co.ModificarProductoCantidad(_aux, ref _res);
+
+                                    _conAux.Abrir();
+                                    _agregado = _conAux.ModificarProductoCantidad(_aux, ref _res);
+                                    _conAux.Cerrar();
                                 }
-                                _agregado = _co.AgregarNota(_no, ref _res);
-                                _co.Cerrar();
+
+                                Conexion _coNota = new Conexion();
+                                _coNota.Abrir();
+                                _agregado = _coNota.AgregarNota(_no, ref _res);
+                                _coNota.Cerrar();
+
                                 if (_agregado)
                                 {
                                     Pedido _aux = new Pedido();
                                     _res = "";
+
                                     _co.Abrir();
                                     _co.AtraparPedido(_pedId, ref _aux, ref _res);
+                                    _co.Cerrar();
+
+                                    _co.Abrir();
                                     _co.AtraparNotaPedido(_pedId, ref _no);
                                     _co.Cerrar();
+
                                     Documentos.GenerarPedido(_aux, _cli);
                                     Documentos.GenerarNota(_no, _cli);
 

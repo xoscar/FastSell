@@ -1,39 +1,42 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Data;
-using System.Data.SqlClient;
 using System.Collections;
 using Fast_SellX.Properties;
-using System.Configuration;
 using System.Windows.Forms;
-using System.Data.SqlTypes;
+
+using MySql.Data.MySqlClient;
+using MySql.Data;
+
+using System.Collections.Generic;
+
 
 namespace Fast_SellX
 {
     public class Conexion
     {
-        SqlConnection _conexion;
+      
+        private MySqlConnection _conexion;
         bool _conectada;
-        SqlCommand _comando;
-        SqlDataReader _reader;
+        MySqlCommand _comando;
+        MySqlDataReader _reader;
+        private ArrayList _conexionPool;
 
         //Constructores
 
         public Conexion()
         {
-            _conexion = new SqlConnection();
-            _conexion.ConnectionString = Settings.Default.PruebaConnectionString; //"data source = OFICINA-PC\\OSCAR; initial catalog = pruebaV2; MultipleActiveResultSets = True; user id = sa; password = system62";
+            _conexion = new  MySqlConnection();
+            _conexion.ConnectionString = Settings.Default.ConnectionString; //"data source = OFICINA-PC\\OSCAR; initial catalog = pruebaV2; MultipleActiveResultSets = True; user id = sa; password = system62";
             _conectada = false;
+            _conexionPool = new ArrayList();
         }
 
         public Conexion(string co)
         {
-            _conexion = new SqlConnection();
+            _conexion = new MySqlConnection();
             _conexion.ConnectionString = co;
             _conectada = false;
+            _conexionPool = new ArrayList();
         }
 
         //Metodos
@@ -76,6 +79,18 @@ namespace Fast_SellX
             get { return _conectada; }
         }
 
+        public MySqlConnection oConexion
+        {
+            get { return _conexion; }
+            set { _conexion = value; }
+        }
+
+        public ArrayList ConexionPool
+        {
+            get { return _conexionPool; }
+            set { _conexionPool = value; }
+        }
+
         //Funciones especificas a la base de datos
         //verifica un usuario de la BD para logear en el sistema
         public bool VerificarUsuario(string login, string password, ref string res, ref Usuario us)
@@ -90,9 +105,8 @@ namespace Fast_SellX
             {
                 bool _encontrado = false;
                 string _consulta = "select * from Usuario where eliminado != 1";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
-
                 while (_reader.Read())
                 {
                     if (_reader.GetValue(1).ToString() == login && _reader.GetValue(2).ToString() == password)
@@ -135,7 +149,7 @@ namespace Fast_SellX
             {
                 dgv.Rows.Clear();
                 string _consulta = "select cli_id,  nombre, apellido, tel from Cliente";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 int i = 0;
                 while (_reader.Read())
@@ -144,11 +158,18 @@ namespace Fast_SellX
                     double _adeudo = 0.0;
                     string _cliId = _reader.GetValue(0).ToString();
                     string _consultaAdeudo = "select sum(saldo_actual) from Nota where cli_id = '" + _cliId + "' and liquidado = 0";
-                    SqlCommand _comAux = new SqlCommand(_consultaAdeudo, _conexion);
-                    SqlDataReader _readerAux = _comAux.ExecuteReader();
-                    string _pedido = "select count(*) from Pedido where fecha_ped <= GETDATE() and cli_id = '"+_cliId+"' and liquidado = 0";
-                    SqlCommand _comPrestamo = new SqlCommand(_pedido, _conexion);
-                    SqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
+                    Conexion _conAdeudo = new Conexion();
+                    _conAdeudo.Abrir();
+                    MySqlCommand _comAux = new MySqlCommand(_consultaAdeudo, _conAdeudo.oConexion );
+
+                    MySqlDataReader _readerAux = _comAux.ExecuteReader();
+                    string _pedido = "select count(*) from Pedido where fecha_ped <= NOW() and cli_id = '"+_cliId+"' and liquidado = 0";
+
+                    Conexion _conPrestamo = new Conexion();
+                    _conPrestamo.Abrir();
+                    MySqlCommand _comPrestamo = new MySqlCommand(_pedido, _conPrestamo.oConexion);
+
+                    MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                     _readerPrestamo.Read();
                     int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
                     _readerAux.Read();
@@ -161,6 +182,10 @@ namespace Fast_SellX
                     dgv[4, i].Value = _adeudo;
                     dgv[5, i].Value = _pedidos;
                     dgv[6, i++].Value = "--->";
+
+                    //close both connections
+                    _conAdeudo.Cerrar();
+                    _conPrestamo.Cerrar();
                 }
                 if (i == 0)
                     res = "No hay clientes para cargar";
@@ -186,23 +211,33 @@ namespace Fast_SellX
                 {
                     case 0:
                         string _consulta = "select cli_id,  nombre, apellido, tel, usr_id from Cliente where cli_id = '" + parametro + "'";
-                        _comando = new SqlCommand(_consulta, _conexion);
+                        _comando = new MySqlCommand(_consulta, _conexion);
                         _reader = _comando.ExecuteReader();
                         _encontrado = _reader.Read();
                         if (_encontrado)
                         {
+
                             dgv.Rows.Add();
                             double _adeudo = 0.0;
                             string _cliId = _reader.GetValue(0).ToString();
+
+
+                            Conexion _conAdeudo = new Conexion();
+                            _conAdeudo.Abrir();
                             string _consultaAdeudo = "select sum(saldo_actual) from Nota where cli_id = '" + _cliId + "'";
-                            SqlCommand _comAux = new SqlCommand(_consultaAdeudo, _conexion);
-                            SqlDataReader _readerAux = _comAux.ExecuteReader();
-                            string _pedido = "select count(*) from Pedido where fecha_ped <= GETDATE() and cli_id = '" + _cliId + "' and liquidado = 0";
-                            SqlCommand _comPrestamo = new SqlCommand(_pedido, _conexion);
-                            SqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
+                            MySqlCommand _comAux = new MySqlCommand(_consultaAdeudo, _conAdeudo.oConexion);
+                            MySqlDataReader _readerAux = _comAux.ExecuteReader();
+
+                            Conexion _conPedidos = new Conexion();
+                            _conPedidos.Abrir();
+                            string _pedido = "select count(*) from Pedido where fecha_ped <= NOW() and cli_id = '" + _cliId + "' and liquidado = 0";
+                            MySqlCommand _comPrestamo = new MySqlCommand(_pedido, _conPedidos.oConexion);
+                            MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                             _readerPrestamo.Read();
                             int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
                             _readerAux.Read();
+                            
+
                             if (_readerAux.GetValue(0) != DBNull.Value)
                                 _adeudo = Convert.ToDouble(_readerAux.GetValue(0));
                             dgv[0, 0].Value = _cliId;
@@ -213,6 +248,9 @@ namespace Fast_SellX
                             dgv[5, 0].Value = _pedidos;
                             dgv[6, 0].Value = "--->";
                             res = "cliente encontrado";
+                            //close both connections
+                            _conAdeudo.Cerrar();
+                            _conPedidos.Cerrar();
                             return true;
                         }
                         else
@@ -223,7 +261,7 @@ namespace Fast_SellX
 
                     case 1:
                         _consulta = "select cli_id,  nombre, apellido,tel, usr_id from Cliente where nombre = '" + parametro + "'";
-                        _comando = new SqlCommand(_consulta, _conexion);
+                        _comando = new MySqlCommand(_consulta, _conexion);
                         _reader = _comando.ExecuteReader();
                         _encontrado = _reader.Read();
                         if (_encontrado)
@@ -232,12 +270,19 @@ namespace Fast_SellX
                             double _adeudo = 0.0;
                             string _cliId = _reader.GetValue(0).ToString();
                             string _consultaAdeudo = "select sum(saldo_actual) from Nota where cli_id = '" + _cliId + "'";
-                            SqlCommand _comAux = new SqlCommand(_consultaAdeudo, _conexion);
-                            SqlDataReader _readerAux = _comAux.ExecuteReader();
+
+
+                            Conexion _conAdeudo = new Conexion();
+                            _conAdeudo.Abrir();
+                            MySqlCommand _comAux = new MySqlCommand(_consultaAdeudo, _conAdeudo.oConexion);
+                            MySqlDataReader _readerAux = _comAux.ExecuteReader();
                             _readerAux.Read();
-                            string _pedido = "select count(*) from Pedido where fecha_ped <= GETDATE() and cli_id = '" + _cliId + "' and liquidado = 0";
-                            SqlCommand _comPrestamo = new SqlCommand(_pedido, _conexion);
-                            SqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
+                            string _pedido = "select count(*) from Pedido where fecha_ped <= NOW() and cli_id = '" + _cliId + "' and liquidado = 0";
+
+                            Conexion _conPedido = new Conexion();
+                            _conPedido.Abrir();
+                            MySqlCommand _comPrestamo = new MySqlCommand(_pedido, _conPedido.oConexion);
+                            MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                             _readerPrestamo.Read();
                             int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
                             if (_readerAux.GetValue(0) != DBNull.Value)
@@ -250,6 +295,9 @@ namespace Fast_SellX
                             dgv[5, 0].Value = _pedidos;
                             dgv[6, 0].Value = "--->";
                             res = "cliente encontrado";
+
+                            _conAdeudo.Cerrar();
+                            _conPedido.Cerrar();
                             return true;
                         }
                         else
@@ -260,20 +308,26 @@ namespace Fast_SellX
 
                     case 2:
                         _consulta = "select cli_id,  nombre, apellido, tel, usr_id from Cliente where apellido = '" + parametro + "'";
-                        _comando = new SqlCommand(_consulta, _conexion);
+                        _comando = new MySqlCommand(_consulta, _conexion);
                         _reader = _comando.ExecuteReader();
                         _encontrado = _reader.Read();
                         if (_encontrado)
                         {
                             dgv.Rows.Add();
                             double _adeudo = 0.0;
+
+                            Conexion _conAdeudo = new Conexion();
+                            _conAdeudo.Abrir();
                             string _cliId = _reader.GetValue(0).ToString();
                             string _consultaAdeudo = "select sum(saldo_actual) from Nota where cli_id = '" + _cliId + "'";
-                            SqlCommand _comAux = new SqlCommand(_consultaAdeudo, _conexion);
-                            SqlDataReader _readerAux = _comAux.ExecuteReader();
-                            string _pedido = "select count(*) from Pedido where fecha_ped <= GETDATE() and cli_id = '" + _cliId + "' and liquidado = 0";
-                            SqlCommand _comPrestamo = new SqlCommand(_pedido, _conexion);
-                            SqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
+                            MySqlCommand _comAux = new MySqlCommand(_consultaAdeudo, _conAdeudo.oConexion);
+                            MySqlDataReader _readerAux = _comAux.ExecuteReader();
+
+                            Conexion _conPedido = new Conexion();
+                            _conPedido.Abrir();
+                            string _pedido = "select count(*) from Pedido where fecha_ped <= NOW() and cli_id = '" + _cliId + "' and liquidado = 0";
+                            MySqlCommand _comPrestamo = new MySqlCommand(_pedido, _conexion);
+                            MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                             _readerPrestamo.Read();
                             int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
                             _readerAux.Read();
@@ -287,6 +341,9 @@ namespace Fast_SellX
                             dgv[5, 0].Value = _pedidos;
                             res = "cliente encontrado";
                             dgv[6, 0].Value = "--->";
+
+                            _conPedido.Cerrar();
+                            _conAdeudo.Cerrar();
                             return true;
                         }
                         else
@@ -315,22 +372,28 @@ namespace Fast_SellX
                 {
                     case 0:
                         string _consulta = "select cli_id,  nombre, apellido, tel, usr_id from Cliente order by cli_id " + desc;
-                        _comando = new SqlCommand(_consulta, _conexion);
+                        _comando = new MySqlCommand(_consulta, _conexion);
                         _reader = _comando.ExecuteReader();
                         int i = 0;
                         while (_reader.Read())
                         {
                             dgv.Rows.Add();
                             double _adeudo = 0.0;
+
+                            Conexion _conAdeudo = new Conexion();
+                            _conAdeudo.Abrir();
                             string _cliId = _reader.GetValue(0).ToString();
                             string _consultaAdeudo = "select sum(saldo_actual) from Nota where cli_id = '" + _cliId + "'";
-                            SqlCommand _comAux = new SqlCommand(_consultaAdeudo, _conexion);
-                            SqlDataReader _readerAux = _comAux.ExecuteReader();
-                            _readerAux.Read();
-                            string _pedido = "select count(*) from Pedido where fecha_ped <= GETDATE() and cli_id = '" + _cliId + "' and liquidado = 0";
-                            SqlCommand _comPrestamo = new SqlCommand(_pedido, _conexion);
-                            SqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
+                            MySqlCommand _comAux = new MySqlCommand(_consultaAdeudo, _conAdeudo.oConexion);
+                            MySqlDataReader _readerAux = _comAux.ExecuteReader();
+
+                            Conexion _conPedido = new Conexion();
+                            _conPedido.Abrir();
+                            string _pedido = "select count(*) from Pedido where fecha_ped <= NOW() and cli_id = '" + _cliId + "' and liquidado = 0";
+                            MySqlCommand _comPrestamo = new MySqlCommand(_pedido, _conPedido.oConexion);
+                            MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                             _readerPrestamo.Read();
+
                             int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
                             if (_readerAux.GetValue(0) != DBNull.Value)
                                 _adeudo = Convert.ToDouble(_readerAux.GetValue(0));
@@ -347,22 +410,29 @@ namespace Fast_SellX
 
                     case 1:
                         _consulta = "select cli_id,  nombre, apellido, tel, usr_id from Cliente order by nombre " + desc;
-                        _comando = new SqlCommand(_consulta, _conexion);
+                        _comando = new MySqlCommand(_consulta, _conexion);
                         _reader = _comando.ExecuteReader();
                         i = 0;
                         while (_reader.Read())
                         {
                             dgv.Rows.Add();
                             double _adeudo = 0.0;
+
+                            Conexion _conAdeudo = new Conexion();
+                            _conAdeudo.Abrir();
                             string _cliId = _reader.GetValue(0).ToString();
                             string _consultaAdeudo = "select sum(saldo_actual) from Nota where cli_id = '" + _cliId + "'";
-                            SqlCommand _comAux = new SqlCommand(_consultaAdeudo, _conexion);
-                            SqlDataReader _readerAux = _comAux.ExecuteReader();
-                            _readerAux.Read();
-                            string _pedido = "select count(*) from Pedido where fecha_ped <= GETDATE() and cli_id = '" + _cliId + "' and liquidado = 0";
-                            SqlCommand _comPrestamo = new SqlCommand(_pedido, _conexion);
-                            SqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
+                            MySqlCommand _comAux = new MySqlCommand(_consultaAdeudo, _conAdeudo.oConexion);
+                            MySqlDataReader _readerAux = _comAux.ExecuteReader();
+
+                            Conexion _conPedido = new Conexion();
+                            _conPedido.Abrir();
+                            string _pedido = "select count(*) from Pedido where fecha_ped <= NOW() and cli_id = '" + _cliId + "' and liquidado = 0";
+                            MySqlCommand _comPrestamo = new MySqlCommand(_pedido, _conPedido.oConexion);
+                            MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                             _readerPrestamo.Read();
+
+
                             int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
                             if (_readerAux.GetValue(0) != DBNull.Value)
                                 _adeudo = Convert.ToDouble(_readerAux.GetValue(0));
@@ -379,22 +449,27 @@ namespace Fast_SellX
 
                     case 2:
                         _consulta = "select cli_id,  nombre, apellido, tel, usr_id from Cliente order by apellido " + desc;
-                        _comando = new SqlCommand(_consulta, _conexion);
+                        _comando = new MySqlCommand(_consulta, _conexion);
                         _reader = _comando.ExecuteReader();
                         i = 0;
                         while (_reader.Read())
                         {
                             dgv.Rows.Add();
                             double _adeudo = 0.0;
+                            Conexion _conAdeudo = new Conexion();
+                            _conAdeudo.Abrir();
                             string _cliId = _reader.GetValue(0).ToString();
                             string _consultaAdeudo = "select sum(saldo_actual) from Nota where cli_id = '" + _cliId + "'";
-                            SqlCommand _comAux = new SqlCommand(_consultaAdeudo, _conexion);
-                            SqlDataReader _readerAux = _comAux.ExecuteReader();
-                            _readerAux.Read();
-                            string _pedido = "select count(*) from Pedido where fecha_ped <= GETDATE() and cli_id = '" + _cliId + "' and liquidado = 0";
-                            SqlCommand _comPrestamo = new SqlCommand(_pedido, _conexion);
-                            SqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
+                            MySqlCommand _comAux = new MySqlCommand(_consultaAdeudo, _conAdeudo.oConexion);
+                            MySqlDataReader _readerAux = _comAux.ExecuteReader();
+
+                            Conexion _conPedido = new Conexion();
+                            _conPedido.Abrir();
+                            string _pedido = "select count(*) from Pedido where fecha_ped <= NOW() and cli_id = '" + _cliId + "' and liquidado = 0";
+                            MySqlCommand _comPrestamo = new MySqlCommand(_pedido, _conPedido.oConexion);
+                            MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                             _readerPrestamo.Read();
+
                             int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
                             if (_readerAux.GetValue(0) != DBNull.Value)
                                 _adeudo = Convert.ToDouble(_readerAux.GetValue(0));
@@ -425,7 +500,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select pedido_id, precio_total, fecha_ped, fecha_entrega, contado, repar_id, usr_id  from Pedido where cli_id = '" + cli_id + "' and liquidado = 0";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 dgv.Rows.Clear();
                 int i = 0;
@@ -464,14 +539,18 @@ namespace Fast_SellX
             {
                 ArrayList prod = new ArrayList();
                 string _consulta = "select * from Cliente where cli_id = '" + cli_id + "'";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 _reader.Read();
                 string _precios = "PreciosCliente";
-                SqlCommand _comPre = new SqlCommand(_precios, _conexion);
+
+                Conexion _conPrecios = new Conexion();
+
+                _conPrecios.Abrir();
+                MySqlCommand _comPre = new MySqlCommand(_precios, _conPrecios.oConexion);
                 _comPre.CommandType = CommandType.StoredProcedure;
-                _comPre.Parameters.AddWithValue("@cli_id", cli_id);
-                SqlDataReader _rePre = _comPre.ExecuteReader();
+                _comPre.Parameters.AddWithValue("p_cli_id", cli_id);
+                MySqlDataReader _rePre = _comPre.ExecuteReader();
                 while (_rePre.Read())
                 {
                     Producto _producto = new Producto();
@@ -493,6 +572,8 @@ namespace Fast_SellX
                 cli.Telefono = _reader.GetValue(6).ToString();
                 cli.Id_Usuario = _reader.GetString(7);
                 cli.Precios = prod;
+
+                _conPrecios.Cerrar();
                
                 res = "Cliente cargado con exito";
                 return true;
@@ -510,7 +591,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select nota_id, cantidad, saldo_actual, fecha_vencimiento, pedido_id from Nota where cli_id =  '" + cli_id + "' and liquidado = 0";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 dgv.Rows.Clear();
                 int i = 0;
@@ -542,7 +623,7 @@ namespace Fast_SellX
                     + "', apellido = '" + cli.Apellido
                     + "', direccion = '" + cli.Direccion
                     + "', tel = '" + cli.Telefono + "', negocio = '"+cli.Negocio+"' where  cli_id = '" + cli.Id_Cliente + "'";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
                 res = "Cliente modificado: " + cli.Nombre + " " + cli.Apellido;
                 return true;
@@ -561,34 +642,41 @@ namespace Fast_SellX
             {
                 string _consulta = "select * from Producto_Cliente_Precio where nombre_prod = '" + nombre + "' and cli_id = '" + cli.Id_Cliente + "' and prod_id = "+prod_id;
                 bool _encontrado = false;
-                _comando = new SqlCommand(_consulta,_conexion);
+                _comando = new MySqlCommand(_consulta,_conexion);
                 _reader = _comando.ExecuteReader();
                 _encontrado = _reader.Read();
                 if (_encontrado)
                 {
-                    _consulta = "update Producto_Cliente_Precio set precio =  @cantidad where nombre_prod = '" + nombre + "'  and prod_id = "+prod_id;
-                    SqlCommand _comAux = new SqlCommand(_consulta, _conexion);
-                    _comAux.Parameters.Add("@cantidad", SqlDbType.Money).Value = Convert.ToDouble(precio);
+                    _consulta = "update Producto_Cliente_Precio set precio =  p_cantidad where nombre_prod = '" + nombre + "'  and prod_id = "+prod_id;
+                    Conexion _conAux = new Conexion();
+                    _conAux.Abrir();
+                    MySqlCommand _comAux = new MySqlCommand(_consulta, _conAux.oConexion);
+                    _comAux.Parameters.Add("p_cantidad", MySqlDbType.Decimal ).Value = Convert.ToDouble(precio);
                     _comAux.ExecuteNonQuery();
                     res = "Precio Modificado";
+                    _conAux.Cerrar();
                     return true;
                 }
                 else
                 {
+                    Conexion _conAux = new Conexion();
+
+                    _conAux.Abrir();
                     _consulta = "select prod_id from Producto where nombre = '"+nombre+"' and prod_id = "+prod_id;
-                    SqlCommand _comando2 = new SqlCommand(_consulta,_conexion);
-                    SqlDataReader _reader2 = _comando2.ExecuteReader();
+                    MySqlCommand _comando2 = new MySqlCommand(_consulta,_conAux.oConexion);
+                    MySqlDataReader _reader2 = _comando2.ExecuteReader();
                     _reader2.Read();
                     prod_id = Convert.ToInt32(_reader2.GetValue(0));
                     _consulta = "insert_producto_cliente_precio";
-                    SqlCommand _comAux = new SqlCommand(_consulta, _conexion);
+                    MySqlCommand _comAux = new MySqlCommand(_consulta, _conexion);
                     _comAux.CommandType = CommandType.StoredProcedure;
-                    _comAux.Parameters.AddWithValue("@precio", precio);
-                    _comAux.Parameters.AddWithValue("@prod_id", prod_id);
-                    _comAux.Parameters.AddWithValue("@nombre_prod", nombre);
-                    _comAux.Parameters.AddWithValue("@cli_id", cli.Id_Cliente);
+                    _comAux.Parameters.AddWithValue("p_precio", precio);
+                    _comAux.Parameters.AddWithValue("p_prod_id", prod_id);
+                    _comAux.Parameters.AddWithValue("p_nombre_prod", nombre);
+                    _comAux.Parameters.AddWithValue("p_cli_id", cli.Id_Cliente);
                     _comAux.ExecuteNonQuery();
                     res = "Precio Agregado";
+                    _conAux.Cerrar();
                     return true;
                 }
             }
@@ -605,7 +693,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select * from pedido where pedido_id = " + ped_id;
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 _reader.Read();
                 ped = new Pedido();
@@ -622,10 +710,13 @@ namespace Fast_SellX
                 ped.Id_Repartidor = _reader.GetValue(8).ToString();
                 _consulta = "ProductosPedido";
                 ArrayList _productos = new ArrayList();
-                SqlCommand _comAux = new SqlCommand(_consulta, _conexion);
+
+                Conexion _conAux = new Conexion();
+                _conAux.Abrir();
+                MySqlCommand _comAux = new MySqlCommand(_consulta, _conAux.oConexion);
                 _comAux.CommandType = CommandType.StoredProcedure;
-                _comAux.Parameters.AddWithValue("@pedido_id", ped_id);
-                SqlDataReader _readerAux = _comAux.ExecuteReader();
+                _comAux.Parameters.AddWithValue("p_pedido_id", ped_id);
+                MySqlDataReader _readerAux = _comAux.ExecuteReader();
                 while (_readerAux.Read())
                 {
                     Producto _aux = new Producto();
@@ -638,6 +729,7 @@ namespace Fast_SellX
                 }
                 ped.Productos = _productos;
                 res = "Mostrado con exito";
+                _conAux.Cerrar();
                 return true;
             }
         }   
@@ -653,7 +745,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select nombre, precio_general, cantidad, tipo_acum, fecha_ingreso, descripcion, usr_id from Producto where prod_id =" + prod_id;
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 _reader.Read();
                 prod = new Producto();
@@ -682,7 +774,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select repar_id from Repartidor";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 cb.Items.Clear();
                 while(_reader.Read())
@@ -705,14 +797,14 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "insert_pedido";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@precio_total", ped.Precio_Total);
-                _comando.Parameters.AddWithValue("@usr_id", ped.Id_Usuario);
-                _comando.Parameters.AddWithValue("@cli_id", ped.Id_Cliente);
-                _comando.Parameters.AddWithValue("@repar_id", ped.Id_Repartidor);
-                _comando.Parameters.AddWithValue("@contado", (ped.Contado == true?0:1));
-                _comando.Parameters.AddWithValue("@fecha_entrega", ped.Fecha_Entrega);
+                _comando.Parameters.AddWithValue("p_precio_total", ped.Precio_Total);
+                _comando.Parameters.AddWithValue("p_usr_id", ped.Id_Usuario);
+                _comando.Parameters.AddWithValue("p_cli_id", ped.Id_Cliente);
+                _comando.Parameters.AddWithValue("p_repar_id", ped.Id_Repartidor);
+                _comando.Parameters.AddWithValue("p_contado", (ped.Contado == true?0:1));
+                _comando.Parameters.AddWithValue("p_fecha_entrega", ped.Fecha_Entrega);
                 _reader = _comando.ExecuteReader();
                 _reader.Read();
                 ped_id = Convert.ToInt32(_reader.GetValue(0));
@@ -722,14 +814,18 @@ namespace Fast_SellX
                     if(_aux.Id_Producto != 0)
                     {
                         _consulta = "insert_pedido_producto";
-                        SqlCommand _comPed = new SqlCommand(_consulta, _conexion);
+                        Conexion _conAux = new Conexion();
+
+                        _conAux.Abrir();
+                        MySqlCommand _comPed = new MySqlCommand(_consulta, _conAux.oConexion);
                         _comPed.CommandType = CommandType.StoredProcedure;
-                        _comPed.Parameters.AddWithValue("@cantidad", _aux.Cantidad);
-                        _comPed.Parameters.AddWithValue("@prod_id", _aux.Id_Producto);
-                        _comPed.Parameters.AddWithValue("@nombre_prod", _aux.Nombre);
-                        _comPed.Parameters.AddWithValue("@pedido_id", ped_id);
-                        _comPed.Parameters.AddWithValue("@precio", _aux.Precio_General);
+                        _comPed.Parameters.AddWithValue("p_cantidad", _aux.Cantidad);
+                        _comPed.Parameters.AddWithValue("p_prod_id", _aux.Id_Producto);
+                        _comPed.Parameters.AddWithValue("p_nombre_prod", _aux.Nombre);
+                        _comPed.Parameters.AddWithValue("p_pedido_id", ped_id);
+                        _comPed.Parameters.AddWithValue("p_precio", _aux.Precio_General);
                         _comPed.ExecuteNonQuery();
+                        _conAux.Cerrar();
                     }
                 }
                 res = "Prestamo insertado con exito";
@@ -748,7 +844,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "update Producto set cantidad = "+prod.Cantidad+ " where prod_id = "+prod.Id_Producto;
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
                 res = "exito";
                 return true;
@@ -767,16 +863,16 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "insert_nota";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@cantidad", no.Cantidad);
-                _comando.Parameters.AddWithValue("@semanas", no.Semanas);
-                _comando.Parameters.AddWithValue("@nota", no.Pagare);
-                _comando.Parameters.AddWithValue("@descripcion", no.Descripcion);
-                _comando.Parameters.AddWithValue("@liquidado", 0);
-                _comando.Parameters.AddWithValue("@cli_id", no.Id_Cliente);
-                _comando.Parameters.AddWithValue("@user", no.Id_User);
-                _comando.Parameters.AddWithValue("@pedido_id", no.Id_Pedido);
+                _comando.Parameters.AddWithValue("p_cantidad", no.Cantidad);
+                _comando.Parameters.AddWithValue("p_semanas", no.Semanas);
+                _comando.Parameters.AddWithValue("p_nota", no.Pagare);
+                _comando.Parameters.AddWithValue("p_descripcion", no.Descripcion);
+                _comando.Parameters.AddWithValue("p_liquidado", 0);
+                _comando.Parameters.AddWithValue("p_cli_id", no.Id_Cliente);
+                _comando.Parameters.AddWithValue("p_user", no.Id_User);
+                _comando.Parameters.AddWithValue("p_pedido_id", no.Id_Pedido);
                 _comando.ExecuteNonQuery();
                 res = "exito";
                 return true;
@@ -794,7 +890,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "update Pedido set liquidado = 1, fecha_liquidacion = '"+ DateTime.Now.ToShortDateString() + "' where pedido_id = " + ped.Id_Pedido;
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
                 res = "Prestamo liquidado con exito";
                 return true;
@@ -812,7 +908,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select pedido_id, fecha_ped, fecha_entrega, fecha_liquidacion, cli_id from Pedido where cli_id = '" + cli.Id_Cliente + "'  and liquidado = 1";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 int i = 0;
                 dgv.Rows.Clear();
@@ -841,7 +937,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select * from Nota where nota_id = " + nota_id;
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 _reader.Read();
                 no.Id_Nota = nota_id;
@@ -873,7 +969,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select nota_id, cantidad, fecha_inicio, fecha_vencimiento, fecha_liquidacion from Nota where liquidado = 1 and cli_id = '" + cli.Id_Cliente + "'";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 int i = 0;
                 dgv.Rows.Clear();
@@ -900,7 +996,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "update Nota set liquidado = 1, fecha_liquidacion = '"+DateTime.Now.ToShortDateString() +"' where nota_id = " + no.Id_Nota;
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
                 res = "Nota Liquidada";
                 return true;
@@ -918,14 +1014,14 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "insert_abono";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@cantidad", _abo.Cantidad);
-                _comando.Parameters.AddWithValue("@fecha", DateTime.Now);
-                _comando.Parameters.AddWithValue("@nota_id", _abo.Id_Nota);
-                _comando.Parameters.AddWithValue("@cli_id", _abo.Id_Cliente);
-                _comando.Parameters.AddWithValue("@usr_login", _abo.Id_User);
-                _comando.Parameters.AddWithValue("@pedido_id", _abo.Id_Pedido);
+                _comando.Parameters.AddWithValue("p_cantidad", _abo.Cantidad);
+                _comando.Parameters.AddWithValue("p_fecha", DateTime.Now);
+                _comando.Parameters.AddWithValue("p_nota_id", _abo.Id_Nota);
+                _comando.Parameters.AddWithValue("p_cli_id", _abo.Id_Cliente);
+                _comando.Parameters.AddWithValue("p_usr_login", _abo.Id_User);
+                _comando.Parameters.AddWithValue("p_pedido_id", _abo.Id_Pedido);
                 _comando.ExecuteNonQuery();
                 res = "Abono Agregado";
                 return true;
@@ -943,7 +1039,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select abono_id, cantidad, fecha from Abono where nota_id = " + nota.Id_Nota;
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 dgv.Rows.Clear();
                 int i = 0;
@@ -971,7 +1067,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "update Nota set descripcion = '" + desc + "', fecha_vencimiento = '" + fecha + "', nota = '" + pagare + "' where nota_id = " + nota.Id_Nota;
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
 
                 nota.Descripcion = desc;
@@ -993,7 +1089,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "delete from Abono where abono_id = " + abono.Id_Abono;
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
                 res = "Abono Eliminado";
                 return true;
@@ -1011,15 +1107,15 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "insert_cliente";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@nombre", cli.Nombre);
-                _comando.Parameters.AddWithValue("@apellido", cli.Apellido);
-                _comando.Parameters.AddWithValue("@direc", cli.Direccion);
-                _comando.Parameters.AddWithValue("@fecha_alta", DateTime.Now.ToShortDateString());
-                _comando.Parameters.AddWithValue("@tel", cli.Telefono);
-                _comando.Parameters.AddWithValue("@user_id", cli.Id_Usuario);
-                _comando.Parameters.AddWithValue("@negocio", cli.Negocio);
+                _comando.Parameters.AddWithValue("p_nombre", cli.Nombre);
+                _comando.Parameters.AddWithValue("p_apellido", cli.Apellido);
+                _comando.Parameters.AddWithValue("p_direc", cli.Direccion);
+                _comando.Parameters.AddWithValue("p_fecha_alta", DateTime.Now.ToShortDateString());
+                _comando.Parameters.AddWithValue("p_tel", cli.Telefono);
+                _comando.Parameters.AddWithValue("p_user_id", cli.Id_Usuario);
+                _comando.Parameters.AddWithValue("p_negocio", cli.Negocio);
                 _comando.ExecuteNonQuery();
                 res = "Cliente: " + cli.Nombre + " " + cli.Apellido + " agregado con exito";
                 return true;
@@ -1037,13 +1133,13 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "insert_repartidor";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@nombre", rep.Nombre);
-                _comando.Parameters.AddWithValue("@apellido", rep.Apellido);
-                _comando.Parameters.AddWithValue("@direccion", rep.Direccion);
-                _comando.Parameters.AddWithValue("@telefono", rep.Telefono);
-                _comando.Parameters.AddWithValue("@usr_id", rep.Id_User);
+                _comando.Parameters.AddWithValue("p_nombre", rep.Nombre);
+                _comando.Parameters.AddWithValue("p_apellido", rep.Apellido);
+                _comando.Parameters.AddWithValue("p_direccion", rep.Direccion);
+                _comando.Parameters.AddWithValue("p_telefono", rep.Telefono);
+                _comando.Parameters.AddWithValue("p_usr_id", rep.Id_User);
                 _comando.ExecuteNonQuery();
                 res = "Repartidor: " + rep.Nombre + " " + rep.Apellido + " agregado exitosamente";
                 return true;
@@ -1061,12 +1157,12 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "insert_usuario";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@nombre", us.Nombre);
-                _comando.Parameters.AddWithValue("@login", us.Login);
-                _comando.Parameters.AddWithValue("@pswd", us.Password);
-                _comando.Parameters.AddWithValue("@tipo", us.CharTipo[us.NumTipo]);
+                _comando.Parameters.AddWithValue("p_nombre", us.Nombre);
+                _comando.Parameters.AddWithValue("p_login", us.Login);
+                _comando.Parameters.AddWithValue("p_pswd", us.Password);
+                _comando.Parameters.AddWithValue("p_tipo", us.CharTipo[us.NumTipo]);
                 _comando.ExecuteNonQuery();
                 res = "Usuario: " + us.Nombre + " con login: " + us.Login + " agregado con exito.";
                 return true;
@@ -1084,7 +1180,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select * from Usuario where usr_login = '" + us.Login + "'";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 if (_reader.Read())
                 {
@@ -1110,7 +1206,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "update Usuario set eliminado = 1 where usr_login = '" + us.Login + "'";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
                 res = "Usuario Bloqueado";
                 return true;
@@ -1128,7 +1224,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "update Usuario set eliminado = 0 where usr_login = '" + us.Login + "'";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
                 res = "Usuario desbloqueado";
                 return true;
@@ -1147,7 +1243,7 @@ namespace Fast_SellX
             {
                 Producto _aux = new Producto();
                 string _consulta = "select prod_id, nombre, precio_general, cantidad, tipo_acum from Producto";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 dgv.Rows.Clear();
                 int i = 0;
@@ -1183,7 +1279,7 @@ namespace Fast_SellX
                         try
                         {
                             string _consulta = "select prod_id, nombre, precio_general, cantidad, tipo_acum from Producto where prod_id =" + parametro;
-                            _comando = new SqlCommand(_consulta, _conexion);
+                            _comando = new MySqlCommand(_consulta, _conexion);
                             _reader = _comando.ExecuteReader();
                             bool _encontro = _reader.Read();
                             if (_encontro)
@@ -1202,7 +1298,7 @@ namespace Fast_SellX
                                 return false;
                             return true;
                         }
-                        catch(SqlException ex)
+                        catch(MySqlException ex)
                         {
                             MessageBox.Show(ex.Message + "Datos erroneos", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             return false;
@@ -1210,7 +1306,7 @@ namespace Fast_SellX
                         //Caso nombre
                     case 1:
                         string _consulta1 = "select prod_id, nombre, precio_general, cantidad, tipo_acum from Producto where nombre = '" + parametro + "'";
-                        _comando = new SqlCommand(_consulta1, _conexion);
+                        _comando = new MySqlCommand(_consulta1, _conexion);
                         _reader = _comando.ExecuteReader();
                         dgv.Rows.Clear();
                         int i = 0;
@@ -1252,10 +1348,10 @@ namespace Fast_SellX
                         try
                         {
                             string _consulta = "BuscarIdProducto";
-                            _comando = new SqlCommand(_consulta, _conexion);
+                            _comando = new MySqlCommand(_consulta, _conexion);
                             _comando.CommandType = CommandType.StoredProcedure;
-                            _comando.Parameters.AddWithValue("@cli_id", cli.Id_Cliente);
-                            _comando.Parameters.AddWithValue("@id", parametro);
+                            _comando.Parameters.AddWithValue("p_cli_id", cli.Id_Cliente);
+                            _comando.Parameters.AddWithValue("p_id", parametro);
                             _reader = _comando.ExecuteReader();
                             dgv.Rows.Clear();
                             int i = 0;
@@ -1274,7 +1370,7 @@ namespace Fast_SellX
                             else
                                 return true;
                         }
-                        catch (SqlException ex)
+                        catch (MySqlException ex)
                         {
                             MessageBox.Show(ex.Message + "Datos erroneos", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             return false;
@@ -1282,10 +1378,10 @@ namespace Fast_SellX
                     //Caso nombre
                     case 1:
                         string _consulta1 = "BuscarNombreProducto";
-                        _comando = new SqlCommand(_consulta1, _conexion);
+                        _comando = new MySqlCommand(_consulta1, _conexion);
                         _comando.CommandType = CommandType.StoredProcedure;
-                        _comando.Parameters.AddWithValue("@cli_id", cli.Id_Cliente);
-                        _comando.Parameters.AddWithValue("@nombre", parametro);
+                        _comando.Parameters.AddWithValue("p_cli_id", cli.Id_Cliente);
+                        _comando.Parameters.AddWithValue("p_nombre", parametro);
                         _reader = _comando.ExecuteReader();
                         dgv.Rows.Clear();
                         int r = 0;
@@ -1318,9 +1414,9 @@ namespace Fast_SellX
             }
             else
             {
-                string _consulta = "update Producto set cantidad = "+prod.Cantidad+" , tipo_acum = "+prod.Tipo+", precio_general = @cantidad , descripcion = '"+prod.Descripcion+"' where prod_id = "+prod.Id_Producto;
-                _comando = new SqlCommand(_consulta, _conexion);
-                _comando.Parameters.Add("@cantidad", SqlDbType.Money).Value = Convert.ToDouble(prod.Precio_General);
+                string _consulta = "update Producto set cantidad = "+prod.Cantidad+" , tipo_acum = "+prod.Tipo+", precio_general = " + prod.Precio_General + " , descripcion = '"+prod.Descripcion+"' where prod_id = "+prod.Id_Producto;
+                _comando = new MySqlCommand(_consulta, _conexion);
+                _comando.Parameters.Add("p_cantidad", MySqlDbType.Decimal ).Value = Convert.ToDouble(prod.Precio_General);
                 _comando.ExecuteNonQuery();
                 res = "Producto Modificado";
                 return true;
@@ -1338,14 +1434,14 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "insert_producto";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@nombre", prod.Nombre);
-                _comando.Parameters.AddWithValue("@precio", prod.Precio_General);
-                _comando.Parameters.AddWithValue("@cantidad", prod.Cantidad);
-                _comando.Parameters.AddWithValue("@tipo_acum", prod.Tipo);
-                _comando.Parameters.AddWithValue("@descripcion", prod.Nombre);
-                _comando.Parameters.AddWithValue("@usr_id", prod.Id_User);
+                _comando.Parameters.AddWithValue("p_nombre", prod.Nombre);
+                _comando.Parameters.AddWithValue("p_precio", prod.Precio_General);
+                _comando.Parameters.AddWithValue("p_cantidad", prod.Cantidad);
+                _comando.Parameters.AddWithValue("p_tipo_acum", prod.Tipo);
+                _comando.Parameters.AddWithValue("p_descripcion", prod.Nombre);
+                _comando.Parameters.AddWithValue("p_usr_id", prod.Id_User);
                 _comando.ExecuteNonQuery();
                 res = "Producto Agregado";
                 return true;
@@ -1363,7 +1459,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "update Producto set cantidad = cantidad + " + prod.Cantidad + " where prod_id = " + prod.Id_Producto;
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
                 res = "Cantidad Agregada";
                 return true;
@@ -1381,7 +1477,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select repar_id, nombre, apellido,  telefono, usr_id from Repartidor";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 int i = 0;
                 dgv.Rows.Clear();
@@ -1409,7 +1505,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select * from Repartidor where repar_id = '" + repar_id + "'";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 _reader.Read();
                 rep.Id_Repartidor = repar_id;
@@ -1435,7 +1531,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select pedido_id, fecha_entrega, precio_total, cli_id, usr_id from Pedido where repar_id = '" + rep.Id_Repartidor + "'";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 int i = 0;
                 dgv.Rows.Clear();
@@ -1462,7 +1558,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "update Repartidor set nombre = '" + rep.Nombre + "', apellido = '" + rep.Apellido + "', direccion = '" + rep.Direccion + "', telefono = '" + rep.Telefono + "' where repar_id = '" + rep.Id_Repartidor + "'";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
                 res = "Repartidor Modificado";
                 return true;
@@ -1480,9 +1576,9 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "PedidosFechaEntrega";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@fecha_entrega", fecha.ToShortDateString());
+                _comando.Parameters.AddWithValue("p_fecha_entrega", fecha.ToShortDateString());
                 _reader = _comando.ExecuteReader();
                 int i = 0;
                 dgv.Rows.Clear();
@@ -1516,9 +1612,9 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "PedidosFechaPedido";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@fecha_pedido", fecha.ToShortDateString());
+                _comando.Parameters.AddWithValue("p_fecha_pedido", fecha.ToShortDateString());
                 _reader = _comando.ExecuteReader();
                 int i = 0;
                 dgv.Rows.Clear();
@@ -1553,7 +1649,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select pedido_id, fecha_ped, fecha_entrega, precio_total, contado, repar_id, usr_id from Pedido where liquidado = 0";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 int i = 0;
                 dgv.Rows.Clear();
@@ -1583,9 +1679,9 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "AbonosTotal";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@fecha", fecha.ToShortDateString());
+                _comando.Parameters.AddWithValue("p_fecha", fecha.ToShortDateString());
                 _reader = _comando.ExecuteReader();
                 _reader.Read();
                 if (_reader.GetValue(0) != DBNull.Value)
@@ -1593,9 +1689,9 @@ namespace Fast_SellX
                 else
                     abonos = 0;
                 _consulta = "VentaTotalPedidos";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@fecha", fecha.ToShortDateString());
+                _comando.Parameters.AddWithValue("p_fecha", fecha.ToShortDateString());
                 _reader = _comando.ExecuteReader();
                 _reader.Read();
                 if (_reader.GetValue(0) != DBNull.Value)
@@ -1617,7 +1713,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select pedido_id, fecha_ped, fecha_entrega, precio_total, contado from Pedido where repar_id = '" + _rep.Id_Repartidor + "' and liquidado = 0";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 ArrayList _pedidos = new ArrayList();
                 while(_reader.Read())
@@ -1644,7 +1740,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select prod_id, nombre, precio_general, tipo_acum from Producto";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 ArrayList _productos = new ArrayList();
                 while(_reader.Read())
@@ -1670,7 +1766,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select nota_id, cantidad, fecha_inicio, fecha_vencimiento, semanas from Nota where pedido_id = "+pedido_id;
-                _comando = new SqlCommand(_consulta,_conexion);
+                _comando = new MySqlCommand(_consulta,_conexion);
                 _reader = _comando.ExecuteReader();
                 _reader.Read();
                 _no.Id_Nota = Convert.ToInt32(_reader.GetValue(0));
@@ -1692,13 +1788,13 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "insert_proveedor";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.CommandType = CommandType.StoredProcedure;
-                _comando.Parameters.AddWithValue("@nombre", _prov.Nombre);
-                _comando.Parameters.AddWithValue("@apellido", _prov.Apellido);
-                _comando.Parameters.AddWithValue("@negocio", _prov.Negocio);
-                _comando.Parameters.AddWithValue("@telefono", _prov.Telefono);
-                _comando.Parameters.AddWithValue("@direccion", _prov.Direccion);
+                _comando.Parameters.AddWithValue("p_nombre", _prov.Nombre);
+                _comando.Parameters.AddWithValue("p_apellido", _prov.Apellido);
+                _comando.Parameters.AddWithValue("p_negocio", _prov.Negocio);
+                _comando.Parameters.AddWithValue("p_telefono", _prov.Telefono);
+                _comando.Parameters.AddWithValue("p_direccion", _prov.Direccion);
                 _comando.ExecuteNonQuery();
                 return true;
             }
@@ -1714,7 +1810,7 @@ namespace Fast_SellX
             else
             {
                 string _consulta = "select prov_id, nombre, appellido, negocio, telefono from Proveedor";
-                _comando = new SqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conexion);
                 _reader = _comando.ExecuteReader();
                 int  i = 0;
                 dgv.Rows.Clear();

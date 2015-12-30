@@ -46,9 +46,11 @@ namespace Fast_SellX
                  _aux = new Nota();
                  _aux.Id_Nota = Convert.ToInt32(dgv[0, e.RowIndex].Value);
                  string _res = "";
+
                  _co.Abrir();
                  _co.AtraparNota(_aux.Id_Nota, ref _aux, ref _res);
                  _co.Cerrar();
+
                  txtCantidad.Text = _aux.Cantidad.ToString("n2");
                  txtCliente.Text = _aux.Id_Cliente;
                  txtDesc.Text = _aux.Descripcion;

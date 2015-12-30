@@ -291,8 +291,8 @@ namespace Fast_SellX
             for (int i = 1; i < 10; i++)
             {
                 _productos.Rows[i].Cells[0].Paragraphs.First().Append(i.ToString());
+                _productos.Rows[i].Cells[1].Paragraphs.First().Append("                             ");
                 _productos.Rows[i].Cells[2].Paragraphs.First().Append("                             ");
-                _productos.Rows[i].Cells[3].Paragraphs.First().Append("                             ");
             }
             _productos.Design = TableDesign.LightGridAccent5;
             _productos.AutoFit = AutoFit.ColumnWidth;
