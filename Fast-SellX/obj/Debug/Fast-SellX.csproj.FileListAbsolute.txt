@@ -86,4 +86,3 @@ C:\Users\Oscar\Documents\FastSellApp\Fast-SellX\obj\Debug\Fast_SellX.Properties.
 C:\Users\Oscar\Documents\FastSellApp\Fast-SellX\obj\Debug\Fast-SellX.csproj.GenerateResource.Cache
 C:\Users\Oscar\Documents\FastSellApp\Fast-SellX\obj\Debug\Fast-SellX.exe
 C:\Users\Oscar\Documents\FastSellApp\Fast-SellX\obj\Debug\Fast-SellX.pdb
-C:\Users\Oscar\Documents\FastSellApp\Fast-SellX\obj\Debug\Fast-SellX.csprojResolveAssemblyReference.cache

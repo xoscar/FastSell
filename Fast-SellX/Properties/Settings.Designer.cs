@@ -26,7 +26,7 @@ namespace Fast_SellX.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.SpecialSettingAttribute(global::System.Configuration.SpecialSetting.ConnectionString)]
-        [global::System.Configuration.DefaultSettingValueAttribute("server=127.0.0.1;uid=root;pwd=;database=prestamax_db;")]
+        [global::System.Configuration.DefaultSettingValueAttribute("server=127.0.0.1;uid=root;pwd=;database=prestamax_db;Convert Zero Datetime=True")]
         public string ConnectionString {
             get {
                 return ((string)(this["ConnectionString"]));

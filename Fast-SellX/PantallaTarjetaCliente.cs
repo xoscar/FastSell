@@ -159,13 +159,13 @@ namespace Fast_SellX
             {
                 if(MessageBox.Show("¿Seguro que desea Agregar el Precio?","Aviso",MessageBoxButtons.YesNo,MessageBoxIcon.Question) == DialogResult.Yes)
                 {
-                    if (txtPrecio.Text.IndexOf('.') <= 0)
-                    {
+                    //if (txtPrecio.Text.IndexOf('.') <= 0)
+                    //{
                         string _nombre = "";
                         double _pres = 0.0;
                         try
                         {
-                            _pres = double.Parse(txtPrecio.Text.ToString());
+                            _pres = double.Parse(txtPrecio.Text  , System.Globalization.CultureInfo.InvariantCulture);
                             _nombre = txtNombreProd.Text;
                         }
                         catch (Exception ex)
@@ -191,9 +191,9 @@ namespace Fast_SellX
                         }
                         else
                             MessageBox.Show(" Error en los datos", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    /*}
                     else
-                        MessageBox.Show("Utilie ',' en vez de '.' para los decimales", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Utilie ',' en vez de '.' para los decimales", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);*/
 
                 }
             }

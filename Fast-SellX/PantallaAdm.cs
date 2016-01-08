@@ -274,7 +274,8 @@ namespace Fast_SellX
                         //Abonar
                     case 5:
                         _cantidad = new Cantidad();
-                        _cantidad.InicializarMain(this, Convert.ToInt32(dgv[2, e.RowIndex].Value), e.RowIndex, 1);
+                        int max = Convert.ToInt32( Convert.ToDouble(dgv[2, e.RowIndex].Value));
+                        _cantidad.InicializarMain(this, max , e.RowIndex, 1);
                         _cantidad.Show();
                         this.Enabled = false;
                         break;
@@ -690,13 +691,13 @@ namespace Fast_SellX
             {
                 if (txtCantidadProducto.Text != "" && txtPrecioProducto.Text != "" && cbTipoProducto.SelectedIndex >= 0)
                 {
-                    if (txtPrecioProducto.Text.IndexOf('.') <= 0)
-                    {
+                    //if (txtPrecioProducto.Text.IndexOf('.') <= 0)
+                    //{
                         try
                         {
                             _aux.Tipo = cbTipoProducto.SelectedIndex;
                             _aux.Cantidad = Convert.ToInt32(txtCantidadProducto.Text);
-                            _aux.Precio_General = double.Parse(txtPrecioProducto.Text);
+                            _aux.Precio_General = double.Parse(txtPrecioProducto.Text , System.Globalization.CultureInfo.InvariantCulture);
                             _aux.Descripcion = txtDescripcionProducto.Text;
                             string _res = "";
 
@@ -720,9 +721,9 @@ namespace Fast_SellX
                             MessageBox.Show(ex.Message + "Error en los datos", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             return;
                         }
-                    }
+                   /* }
                     else
-                        MessageBox.Show("Utilice ',' en vez de '.' para los decimales", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Utilice ',' en vez de '.' para los decimales", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);*/
                 }
                 else
                     MessageBox.Show("Almenos ingresar Cantidad, Precio y Tipo de producto", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -746,14 +747,14 @@ namespace Fast_SellX
             {
                 if (txtNombreProd.Text != "" && txtCantidadProd.Text != "" && txtPrecioGeneralProd.Text != "" && cbTipoProd.SelectedIndex >= 0)
                 {
-                    if (txtPrecioGeneralProd.Text.IndexOf('.') <= 0)
-                    {
+                    //if (txtPrecioGeneralProd.Text.IndexOf('.') <= 0)
+                    //{
                         Producto _aux1 = new Producto();
                         try
                         {
                             this.Width = 600;
                             _aux1.Nombre = txtNombreProd.Text;
-                            _aux1.Precio_General = Convert.ToDouble(txtPrecioGeneralProd.Text);
+                            _aux1.Precio_General = double.Parse(txtPrecioGeneralProd.Text, System.Globalization.CultureInfo.InvariantCulture);
                             _aux1.Tipo = cbTipoProd.SelectedIndex;
                             _aux1.Cantidad = Convert.ToInt32(txtCantidadProd.Text);
                             _aux1.Id_User = _user.Login;
@@ -770,9 +771,9 @@ namespace Fast_SellX
                         MessageBox.Show(_res, "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         _co.MostrarProductos(dgvProducto, ref _res);
                         _co.Cerrar();
-                    }
+                    /*}
                     else
-                        MessageBox.Show("Utilie ',' en vez de '.' para los decimales", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Utilie ',' en vez de '.' para los decimales", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);*/
                 }
                 else
                     MessageBox.Show("Ingrese los datos marcados", "Aviso", MessageBoxButtons.OK, MessageBoxIcon.Error);

@@ -326,7 +326,7 @@ namespace Fast_SellX
                             Conexion _conPedido = new Conexion();
                             _conPedido.Abrir();
                             string _pedido = "select count(*) from Pedido where fecha_ped <= NOW() and cli_id = '" + _cliId + "' and liquidado = 0";
-                            MySqlCommand _comPrestamo = new MySqlCommand(_pedido, _conexion);
+                            MySqlCommand _comPrestamo = new MySqlCommand(_pedido, _conPedido.oConexion);
                             MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                             _readerPrestamo.Read();
                             int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
@@ -393,7 +393,7 @@ namespace Fast_SellX
                             MySqlCommand _comPrestamo = new MySqlCommand(_pedido, _conPedido.oConexion);
                             MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                             _readerPrestamo.Read();
-
+                            _readerAux.Read();
                             int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
                             if (_readerAux.GetValue(0) != DBNull.Value)
                                 _adeudo = Convert.ToDouble(_readerAux.GetValue(0));
@@ -432,7 +432,7 @@ namespace Fast_SellX
                             MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                             _readerPrestamo.Read();
 
-
+                            _readerAux.Read();
                             int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
                             if (_readerAux.GetValue(0) != DBNull.Value)
                                 _adeudo = Convert.ToDouble(_readerAux.GetValue(0));
@@ -470,6 +470,7 @@ namespace Fast_SellX
                             MySqlDataReader _readerPrestamo = _comPrestamo.ExecuteReader();
                             _readerPrestamo.Read();
 
+                            _readerAux.Read();
                             int _pedidos = Convert.ToInt32(_readerPrestamo.GetValue(0));
                             if (_readerAux.GetValue(0) != DBNull.Value)
                                 _adeudo = Convert.ToDouble(_readerAux.GetValue(0));
@@ -509,15 +510,20 @@ namespace Fast_SellX
                     dgv.Rows.Add();
                     for (int j = 0; j < 7; j++)
                     {
-                        if (j == 4)
-                        {
-                            if (Convert.ToInt32(_reader.GetValue(j)) == 0)
-                                dgv[j, i].Value = "SI";
-                            else
-                                dgv[j, i].Value = "NO";
-                        }
+                        if (j == 1)
+                            dgv[j, i].Value = Convert.ToDouble(_reader.GetValue(j)).ToString("N2");
                         else
-                            dgv[j, i].Value = _reader.GetValue(j).ToString();
+                        {
+                            if (j == 4)
+                            {
+                                if (Convert.ToInt32(_reader.GetValue(j)) == 0)
+                                    dgv[j, i].Value = "SI";
+                                else
+                                    dgv[j, i].Value = "NO";
+                            }
+                            else
+                                dgv[j, i].Value = _reader.GetValue(j).ToString();
+                        }
                     }
                     dgv[7, i].Value = "...";
                     dgv[8, i++].Value = "***";
@@ -599,7 +605,12 @@ namespace Fast_SellX
                 {
                     dgv.Rows.Add();
                     for (int j = 0; j < 5; j++)
-                        dgv[j, i].Value = _reader.GetValue(j).ToString();
+                    {
+                        if( j == 2 || j == 1 )
+                            dgv[j, i].Value = Convert.ToDouble(_reader.GetValue(j)).ToString("N2");
+                        else
+                            dgv[j, i].Value = _reader.GetValue(j).ToString();
+                    }
                     dgv[5, i].Value = "+";
                     dgv[6, i].Value = "...";
                     dgv[7, i++].Value = "***";
@@ -647,7 +658,7 @@ namespace Fast_SellX
                 _encontrado = _reader.Read();
                 if (_encontrado)
                 {
-                    _consulta = "update Producto_Cliente_Precio set precio =  p_cantidad where nombre_prod = '" + nombre + "'  and prod_id = "+prod_id;
+                    _consulta = "update Producto_Cliente_Precio set precio = @p_cantidad where nombre_prod = '" + nombre + "'  and prod_id = "+prod_id;
                     Conexion _conAux = new Conexion();
                     _conAux.Abrir();
                     MySqlCommand _comAux = new MySqlCommand(_consulta, _conAux.oConexion);
@@ -660,15 +671,17 @@ namespace Fast_SellX
                 else
                 {
                     Conexion _conAux = new Conexion();
-
+                    Conexion _conDos = new Conexion();
                     _conAux.Abrir();
+                    _conDos.Abrir();
+                    
                     _consulta = "select prod_id from Producto where nombre = '"+nombre+"' and prod_id = "+prod_id;
                     MySqlCommand _comando2 = new MySqlCommand(_consulta,_conAux.oConexion);
                     MySqlDataReader _reader2 = _comando2.ExecuteReader();
                     _reader2.Read();
                     prod_id = Convert.ToInt32(_reader2.GetValue(0));
                     _consulta = "insert_producto_cliente_precio";
-                    MySqlCommand _comAux = new MySqlCommand(_consulta, _conexion);
+                    MySqlCommand _comAux = new MySqlCommand(_consulta, _conDos.oConexion);
                     _comAux.CommandType = CommandType.StoredProcedure;
                     _comAux.Parameters.AddWithValue("p_precio", precio);
                     _comAux.Parameters.AddWithValue("p_prod_id", prod_id);
@@ -677,6 +690,7 @@ namespace Fast_SellX
                     _comAux.ExecuteNonQuery();
                     res = "Precio Agregado";
                     _conAux.Cerrar();
+                    _conDos.Cerrar();
                     return true;
                 }
             }
@@ -1066,7 +1080,8 @@ namespace Fast_SellX
             }
             else
             {
-                string _consulta = "update Nota set descripcion = '" + desc + "', fecha_vencimiento = '" + fecha + "', nota = '" + pagare + "' where nota_id = " + nota.Id_Nota;
+                DateTime _fecha = DateTime.ParseExact(fecha , "dd/MM/yyyy" , System.Globalization.CultureInfo.InvariantCulture);
+                string _consulta = "update Nota set descripcion = '" + desc + "', fecha_vencimiento = '" + _fecha.ToString("yyyy-MM-dd") + "', nota = '" + pagare + "' where nota_id = " + nota.Id_Nota;
                 _comando = new MySqlCommand(_consulta, _conexion);
                 _comando.ExecuteNonQuery();
 
@@ -1414,9 +1429,9 @@ namespace Fast_SellX
             }
             else
             {
-                string _consulta = "update Producto set cantidad = "+prod.Cantidad+" , tipo_acum = "+prod.Tipo+", precio_general = " + prod.Precio_General + " , descripcion = '"+prod.Descripcion+"' where prod_id = "+prod.Id_Producto;
+                string _consulta = "update Producto set cantidad = "+prod.Cantidad+" , tipo_acum = "+prod.Tipo+", precio_general = " + prod.Precio_General.ToString().Replace(',','.') + " , descripcion = '"+prod.Descripcion+"' where prod_id = "+prod.Id_Producto;
                 _comando = new MySqlCommand(_consulta, _conexion);
-                _comando.Parameters.Add("p_cantidad", MySqlDbType.Decimal ).Value = Convert.ToDouble(prod.Precio_General);
+                _comando.Parameters.Add("p_cantidad", MySqlDbType.Decimal ).Value = double.Parse( prod.Precio_General.ToString() , System.Globalization.CultureInfo.InvariantCulture);
                 _comando.ExecuteNonQuery();
                 res = "Producto Modificado";
                 return true;
@@ -1688,8 +1703,11 @@ namespace Fast_SellX
                     abonos = Convert.ToDouble(_reader.GetValue(0));
                 else
                     abonos = 0;
+
+                Conexion _conAux = new Conexion();
+                _conAux.Abrir();
                 _consulta = "VentaTotalPedidos";
-                _comando = new MySqlCommand(_consulta, _conexion);
+                _comando = new MySqlCommand(_consulta, _conAux.oConexion);
                 _comando.CommandType = CommandType.StoredProcedure;
                 _comando.Parameters.AddWithValue("p_fecha", fecha.ToShortDateString());
                 _reader = _comando.ExecuteReader();
@@ -1699,6 +1717,7 @@ namespace Fast_SellX
                 else
                     pedidos = 0;
                 res = "exito";
+                _conAux.Cerrar();
                 return true;
             }
         }
